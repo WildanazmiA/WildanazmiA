@@ -1,13 +1,13 @@
 <div align="center">
 
-<h3><code>WildanazmiA@github ~ $ whoami</code></h3>
+<h3><code>WildanazmiA@github</code></h3>
 
 <img src="./wordmark.svg" width="490" alt="WILDAN, 3D ASCII wordmark" />
 
 <br>
 <br>
 
-<h3><code>WildanazmiA@github ~ $ ./snake.sh</code></h3>
+<h3><code>WildanazmiA@github/snake.sh</code></h3>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WildanazmiA/WildanazmiA/output/github-snake-dark.svg" />
