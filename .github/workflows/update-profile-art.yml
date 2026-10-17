@@ -20,6 +20,7 @@ jobs:
           python-version: "3.12"
 
       - name: Generate stats and commit languages
+        continue-on-error: true
         run: python scripts/generate_stats.py "${{ github.repository_owner }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -32,6 +33,7 @@ jobs:
 
   contrib3d:
     needs: stats
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -51,6 +53,7 @@ jobs:
 
   arcade:
     needs: contrib3d
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
