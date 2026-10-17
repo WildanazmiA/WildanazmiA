@@ -7,7 +7,6 @@
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Moh_Wildan_Azmi_Abdullah-0C3B57?style=for-the-badge&logo=linkedin&logoColor=white&labelColor=041C38)](https://www.linkedin.com/in/moh-wildan-azmi-abdullah-179684389)
 [![Instagram](https://img.shields.io/badge/Instagram-wildan__willll-DE0202?style=for-the-badge&logo=instagram&logoColor=white&labelColor=041C38)](https://www.instagram.com/wildan_willll/)
 [![Spotify](https://img.shields.io/badge/Spotify-Playlist-DCB318?style=for-the-badge&logo=spotify&logoColor=white&labelColor=041C38)](https://open.spotify.com/user/31jd2qz3iz2n2kdz56tdz6suyd7u)
-[![Views](https://komarev.com/ghpvc/?username=WildanazmiA&label=Views&color=810D10&style=for-the-badge&labelColor=041C38)](https://github.com/WildanazmiA)
 
 <br>
 
@@ -35,7 +34,7 @@
 <img src="https://skillicons.dev/icons?i=python,js,ts,php,html,css&theme=dark" alt="Languages" />
 
 **Frontend**<br>
-<img src="https://skillicons.dev/icons?i=react,nextjs,tailwind,framer&theme=dark" alt="Frontend" />
+<img src="https://skillicons.dev/icons?i=react,nextjs,tailwind&theme=dark" alt="Frontend" />
 
 **Backend and Database**<br>
 <img src="https://skillicons.dev/icons?i=laravel,prisma,postgres&theme=dark" alt="Backend and database" />
@@ -57,10 +56,6 @@
 
 <br>
 
-<img src="./profile-3d-contrib/profile-night-rainbow.svg" alt="3D contribution calendar" width="100%" />
-
-<br>
-
 <img src="https://raw.githubusercontent.com/WildanazmiA/WildanazmiA/output/github-snake.svg" alt="Snake eating my contribution graph" width="100%" />
 
 <br>
@@ -74,7 +69,7 @@
 <br>
 
 <a href="https://open.spotify.com/user/31jd2qz3iz2n2kdz56tdz6suyd7u">
-  <img src="https://spotify-github-profile.kittinanx.com/api/view?uid=31jd2qz3iz2n2kdz56tdz6suyd7u&cover_image=true&theme=natemoo-re&show_offline=false&background_color=041C38&interchange=false&bar_color=DE0202&bar_color_cover=false" alt="Spotify now playing" />
+  <img src="https://spotify-github-profile.kittinanx.com/api/view?uid=31jd2qz3iz2n2kdz56tdz6suyd7u&cover_image=true&theme=natemoo-re&show_offline=true&background_color=041C38&interchange=false&bar_color=DE0202&bar_color_cover=false" alt="Spotify now playing" />
 </a>
 
 <br>
