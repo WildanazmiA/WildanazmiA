@@ -13,6 +13,7 @@ import datetime
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from xml.sax.saxutils import escape
 
@@ -44,8 +45,12 @@ def api(path, token, data=None):
             "Accept": "application/vnd.github+json",
         },
     )
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace")[:500]
+        raise RuntimeError(f"GitHub API {e.code} on {path}: {body}") from None
 
 
 def fetch_stats(user, token):
@@ -66,7 +71,7 @@ def fetch_stats(user, token):
 
 
 def fetch_langs(user, token, days=30, max_commits=60):
-    since = (datetime.datetime.utcnow() - datetime.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    since = (datetime.datetime.now(datetime.timezone.utc) -datetime.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     repos = api(f"/users/{user}/repos?type=owner&sort=pushed&per_page=15", token)
     added, removed = collections.Counter(), collections.Counter()
     seen = 0
@@ -193,9 +198,20 @@ def main():
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if not token:
         sys.exit("Set GH_TOKEN or GITHUB_TOKEN")
-    write("stats.svg", stats_svg(fetch_stats(a.user, token)))
-    add, rem = fetch_langs(a.user, token)
-    write("commit-langs.svg", langs_svg(add, rem))
+    failed = False
+    try:
+        write("stats.svg", stats_svg(fetch_stats(a.user, token)))
+    except Exception as e:
+        failed = True
+        print(f"ERROR stats: {e}", file=sys.stderr)
+    try:
+        add, rem = fetch_langs(a.user, token)
+        write("commit-langs.svg", langs_svg(add, rem))
+    except Exception as e:
+        failed = True
+        print(f"ERROR commit-langs: {e}", file=sys.stderr)
+    if failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
