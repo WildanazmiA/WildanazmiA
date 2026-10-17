@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./assets/header.svg" alt="Wildan, Cybersecurity Enthusiast" width="100%" />
+<img src="./assets/v2-header.svg" alt="Wildan, Cybersecurity Enthusiast" width="100%" />
 
 <br>
 
@@ -10,7 +10,7 @@
 
 <br>
 
-<img src="./assets/title-about.svg" alt="About me" width="100%" />
+<img src="./assets/v2-title-about.svg" alt="About me" width="100%" />
 
 <br>
 
@@ -18,7 +18,7 @@
 
 <br>
 
-<img src="./assets/title-stats.svg" alt="Stats" width="100%" />
+<img src="./assets/v2-title-stats.svg" alt="Stats" width="100%" />
 
 <br>
 
@@ -26,7 +26,7 @@
 
 <br>
 
-<img src="./assets/title-stack.svg" alt="Tech stack" width="100%" />
+<img src="./assets/v2-title-stack.svg" alt="Tech stack" width="100%" />
 
 <br>
 
@@ -44,7 +44,7 @@
 
 <br>
 
-<img src="./assets/title-commits.svg" alt="What I actually commit" width="100%" />
+<img src="./assets/v2-title-commits.svg" alt="What I actually commit" width="100%" />
 
 <br>
 
@@ -52,7 +52,7 @@
 
 <br>
 
-<img src="./assets/title-contrib.svg" alt="Contributions" width="100%" />
+<img src="./assets/v2-title-contrib.svg" alt="Contributions" width="100%" />
 
 <br>
 
@@ -64,7 +64,7 @@
 
 <br>
 
-<img src="./assets/title-music.svg" alt="Now playing" width="100%" />
+<img src="./assets/v2-title-music.svg" alt="Now playing" width="100%" />
 
 <br>
 
@@ -75,7 +75,7 @@
 <br>
 <br>
 
-<img src="./assets/title-connect.svg" alt="Let's connect" width="100%" />
+<img src="./assets/v2-title-connect.svg" alt="Let's connect" width="100%" />
 
 <br>
 

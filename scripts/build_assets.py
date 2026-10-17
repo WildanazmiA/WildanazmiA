@@ -128,7 +128,7 @@ def header():
   </g>
 </svg>
 """
-    write("header.svg", svg)
+    write("v2-header.svg", svg)
 
 
 def section(name, number, title):
@@ -198,10 +198,10 @@ def about():
 if __name__ == "__main__":
     header()
     about()
-    section("title-about.svg", "01", "About me")
-    section("title-stats.svg", "02", "Stats")
-    section("title-stack.svg", "03", "Tech stack")
-    section("title-commits.svg", "04", "What I actually commit")
-    section("title-contrib.svg", "05", "Contributions")
-    section("title-music.svg", "06", "Now playing")
-    section("title-connect.svg", "07", "Let's connect")
+    section("v2-title-about.svg", "01", "About me")
+    section("v2-title-stats.svg", "02", "Stats")
+    section("v2-title-stack.svg", "03", "Tech stack")
+    section("v2-title-commits.svg", "04", "What I actually commit")
+    section("v2-title-contrib.svg", "05", "Contributions")
+    section("v2-title-music.svg", "06", "Now playing")
+    section("v2-title-connect.svg", "07", "Let's connect")
