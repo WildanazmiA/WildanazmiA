@@ -23,7 +23,7 @@ jobs:
         continue-on-error: true
         run: python scripts/generate_stats.py "${{ github.repository_owner }}"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_STATS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Commit stats
         uses: stefanzweifel/git-auto-commit-action@v5
