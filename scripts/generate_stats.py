@@ -55,10 +55,17 @@ def api(path, token, data=None):
 
 def fetch_stats(user, token):
     q = """query($login:String!){user(login:$login){
-      repositories(ownerAffiliation:OWNER,isFork:false,privacy:PUBLIC,first:100){totalCount nodes{stargazerCount}}
+      repositories(ownerAffiliation:OWNER,isFork:false,first:100){totalCount nodes{stargazerCount}}
       contributionsCollection{totalCommitContributions totalPullRequestContributions
         totalIssueContributions contributionCalendar{totalContributions}}}}"""
-    d = api("/graphql", token, {"query": q, "variables": {"login": user}})["data"]["user"]
+    resp = api("/graphql", token, {"query": q, "variables": {"login": user}})
+    if resp.get("errors"):
+        msgs = "; ".join(str(e.get("message", e)) for e in resp["errors"])
+        print(f"WARN graphql: {msgs}", file=sys.stderr)
+    d = (resp.get("data") or {}).get("user")
+    if not d:
+        print("WARN graphql returned no user data, using the REST fallback", file=sys.stderr)
+        return fetch_stats_rest(user, token), "Partial data: GraphQL unavailable"
     cc = d["contributionsCollection"]
     return {
         "Contributions (12 mo)": cc["contributionCalendar"]["totalContributions"],
@@ -66,13 +73,41 @@ def fetch_stats(user, token):
         "Pull requests": cc["totalPullRequestContributions"],
         "Issues": cc["totalIssueContributions"],
         "Stars earned": sum(n["stargazerCount"] for n in d["repositories"]["nodes"]),
-        "Public repos": d["repositories"]["totalCount"],
+        "Repositories": d["repositories"]["totalCount"],
+    }, None
+
+
+def fetch_stats_rest(user, token):
+    """Fallback that only uses REST. It counts public activity, and has no 12 month total."""
+    u = api(f"/users/{user}", token)
+    repos = api(f"/users/{user}/repos?type=owner&per_page=100", token)
+    stars = sum(r.get("stargazers_count", 0) for r in repos if not r.get("fork"))
+
+    def total(path):
+        try:
+            return api(path, token)["total_count"]
+        except Exception as e:
+            print(f"WARN {path}: {e}", file=sys.stderr)
+            return None
+
+    return {
+        "Contributions (12 mo)": None,
+        "Commits": total(f"/search/commits?q=author:{user}&per_page=1"),
+        "Pull requests": total(f"/search/issues?q=author:{user}+type:pr&per_page=1"),
+        "Issues": total(f"/search/issues?q=author:{user}+type:issue&per_page=1"),
+        "Stars earned": stars,
+        "Repositories": u.get("public_repos"),
     }
 
 
 def fetch_langs(user, token, days=30, max_commits=60):
     since = (datetime.datetime.now(datetime.timezone.utc) -datetime.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    repos = api(f"/users/{user}/repos?type=owner&sort=pushed&per_page=15", token)
+    try:
+        # A personal access token can list private repos too.
+        repos = api("/user/repos?affiliation=owner&sort=pushed&per_page=15", token)
+    except Exception:
+        # The default workflow token only sees public repos.
+        repos = api(f"/users/{user}/repos?type=owner&sort=pushed&per_page=15", token)
     added, removed = collections.Counter(), collections.Counter()
     seen = 0
     for r in repos:
@@ -183,12 +218,12 @@ def main():
     a = ap.parse_args()
 
     if a.placeholder:
-        empty = {k: None for k in ["Contributions (12 mo)", "Commits", "Pull requests", "Issues", "Stars earned", "Public repos"]}
+        empty = {k: None for k in ["Contributions (12 mo)", "Commits", "Pull requests", "Issues", "Stars earned", "Repositories"]}
         write("stats.svg", stats_svg(empty, "Fills in after the first workflow run"))
         write("commit-langs.svg", langs_svg(collections.Counter(), collections.Counter(), "Fills in after the first workflow run"))
         return
     if a.demo:
-        s = {"Contributions (12 mo)": 412, "Commits": 361, "Pull requests": 9, "Issues": 4, "Stars earned": 7, "Public repos": 12}
+        s = {"Contributions (12 mo)": 412, "Commits": 361, "Pull requests": 9, "Issues": 4, "Stars earned": 7, "Repositories": 12}
         add = collections.Counter({"TypeScript": 5200, "PHP": 2100, "Python": 1500, "CSS": 900, "HTML": 600})
         rem = collections.Counter({"TypeScript": 1800, "PHP": 700, "Python": 300, "CSS": 350, "HTML": 90})
         write("stats-demo.svg", stats_svg(s, "DEMO DATA, not real"))
@@ -200,7 +235,8 @@ def main():
         sys.exit("Set GH_TOKEN or GITHUB_TOKEN")
     failed = False
     try:
-        write("stats.svg", stats_svg(fetch_stats(a.user, token)))
+        stats, note = fetch_stats(a.user, token)
+        write("stats.svg", stats_svg(stats, note))
     except Exception as e:
         failed = True
         print(f"ERROR stats: {e}", file=sys.stderr)
