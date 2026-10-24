@@ -100,30 +100,43 @@ def fetch_stats_rest(user, token):
     }
 
 
-def fetch_langs(user, token, days=30, max_commits=60):
-    since = (datetime.datetime.now(datetime.timezone.utc) -datetime.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+DAYS = 90
+
+
+def list_repos(user, token):
     try:
         # A personal access token can list private repos too.
-        repos = api("/user/repos?affiliation=owner&sort=pushed&per_page=15", token)
+        return api("/user/repos?affiliation=owner&sort=pushed&per_page=15", token)
     except Exception:
         # The default workflow token only sees public repos.
-        repos = api(f"/users/{user}/repos?type=owner&sort=pushed&per_page=15", token)
+        return api(f"/users/{user}/repos?type=owner&sort=pushed&per_page=15", token)
+
+
+def fetch_langs(user, token, repos, days=DAYS, max_commits=60):
+    since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     added, removed = collections.Counter(), collections.Counter()
     seen = 0
     for r in repos:
         if r.get("fork"):
             continue
         try:
-            commits = api(f"/repos/{user}/{r['name']}/commits?author={user}&since={since}&per_page=30", token)
-        except Exception:
+            # No author filter on purpose: commits with an email that is not linked
+            # to the account would be dropped. These are my own repos, so bots are skipped instead.
+            commits = api(f"/repos/{user}/{r['name']}/commits?since={since}&per_page=30", token)
+        except Exception as e:
+            print(f"WARN commits of {r['name']}: {e}", file=sys.stderr)
             continue
         for c in commits:
             if seen >= max_commits:
                 break
+            login = ((c.get("author") or {}).get("login") or "")
+            if "[bot]" in login:
+                continue
             seen += 1
             try:
                 detail = api(f"/repos/{user}/{r['name']}/commits/{c['sha']}", token)
-            except Exception:
+            except Exception as e:
+                print(f"WARN commit {c['sha'][:7]}: {e}", file=sys.stderr)
                 continue
             for f in detail.get("files", []):
                 ext = os.path.splitext(f["filename"])[1].lower()
@@ -132,7 +145,22 @@ def fetch_langs(user, token, days=30, max_commits=60):
                     continue
                 added[lang] += f.get("additions", 0)
                 removed[lang] += f.get("deletions", 0)
+    print(f"INFO repos={len(repos)} commits={seen} languages={dict(added)}", file=sys.stderr)
     return added, removed
+
+
+def fetch_repo_sizes(user, token, repos):
+    """Fallback when there are no recent commits: code size per language across the repos."""
+    sizes = collections.Counter()
+    for r in repos:
+        if r.get("fork"):
+            continue
+        try:
+            for lang, n in api(f"/repos/{user}/{r['name']}/languages", token).items():
+                sizes[lang] += n
+        except Exception as e:
+            print(f"WARN languages of {r['name']}: {e}", file=sys.stderr)
+    return sizes
 
 
 def write(name, svg):
@@ -171,23 +199,31 @@ def stats_svg(stats, note=None):
 """
 
 
-def langs_svg(added, removed, note=None):
+def langs_svg(added, removed, note=None, title=None, size_mode=False):
     langs = sorted(added.keys() | removed.keys(), key=lambda k: -(added[k] + removed[k]))[:6]
+    has_removed = any(removed.values()) and not size_mode
+    title = title or f"Lines changed per language, last {DAYS} days"
     w = 900
     row_h = 42
     h = 70 + max(len(langs), 1) * row_h + 34
     parts = [
         f'<rect width="{w}" height="{h}" rx="14" fill="{C["bg"]}"/>',
-        f'<text x="24" y="36" font-family="{MONO}" font-size="15" fill="{C["silver"]}">Lines changed per language, last 30 days</text>',
-        f'<rect x="{w - 250}" y="24" width="12" height="12" rx="2" fill="{C["gold"]}"/>'
-        f'<text x="{w - 232}" y="35" font-family="{MONO}" font-size="13" fill="{C["qsilver"]}">added</text>'
-        f'<rect x="{w - 160}" y="24" width="12" height="12" rx="2" fill="{C["red"]}"/>'
-        f'<text x="{w - 142}" y="35" font-family="{MONO}" font-size="13" fill="{C["qsilver"]}">removed</text>',
+        f'<text x="24" y="36" font-family="{MONO}" font-size="15" fill="{C["silver"]}">{escape(title)}</text>',
     ]
+    if not size_mode:
+        parts.append(
+            f'<rect x="{w - 250}" y="24" width="12" height="12" rx="2" fill="{C["gold"]}"/>'
+            f'<text x="{w - 232}" y="35" font-family="{MONO}" font-size="13" fill="{C["qsilver"]}">added</text>'
+        )
+        if has_removed:
+            parts.append(
+                f'<rect x="{w - 160}" y="24" width="12" height="12" rx="2" fill="{C["red"]}"/>'
+                f'<text x="{w - 142}" y="35" font-family="{MONO}" font-size="13" fill="{C["qsilver"]}">removed</text>'
+            )
     if not langs:
         parts.append(
             f'<text x="{w // 2}" y="{h // 2 + 8}" text-anchor="middle" font-family="{MONO}" font-size="15" fill="{C["gray"]}">'
-            f'{escape(note or "No commits in the last 30 days")}</text>'
+            f'{escape(note or "No recent commits")}</text>'
         )
     else:
         mx = max(max(added[k], removed[k]) for k in langs) or 1
@@ -195,18 +231,27 @@ def langs_svg(added, removed, note=None):
         for i, k in enumerate(langs):
             y = 64 + i * row_h
             a = max(int(bar_w * added[k] / mx), 2)
-            r = max(int(bar_w * removed[k] / mx), 2) if removed[k] else 0
             parts.append(
                 f'<text x="24" y="{y + 22}" font-family="{MONO}" font-size="15" fill="{C["silver"]}">{escape(k)}</text>'
+            )
+            if size_mode:
+                kb = added[k] / 1024
+                parts.append(
+                    f'<rect x="{bar_x}" y="{y + 10}" width="{a}" height="14" rx="7" fill="{C["gold"]}"/>'
+                    f'<text x="{bar_x + bar_w + 20}" y="{y + 22}" font-family="{MONO}" font-size="13" fill="{C["gold"]}">{kb:,.0f} KB</text>'
+                )
+                continue
+            r = max(int(bar_w * removed[k] / mx), 2) if removed[k] else 0
+            parts.append(
                 f'<rect x="{bar_x}" y="{y + 4}" width="{a}" height="12" rx="6" fill="{C["gold"]}"/>'
                 f'<rect x="{bar_x}" y="{y + 20}" width="{r}" height="12" rx="6" fill="{C["red"]}"/>'
                 f'<text x="{bar_x + bar_w + 20}" y="{y + 16}" font-family="{MONO}" font-size="13" fill="{C["gold"]}">+{added[k]:,}</text>'
                 f'<text x="{bar_x + bar_w + 20}" y="{y + 32}" font-family="{MONO}" font-size="13" fill="{C["red"]}">-{removed[k]:,}</text>'
             )
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" role="img" aria-label="Lines changed per language">'
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" role="img" aria-label="{escape(title)}">'
         + "".join(parts)
-        + f'<text x="{w - 16}" y="{h - 10}" text-anchor="end" font-family="{MONO}" font-size="12" fill="{C["gray"]}">Updated daily by GitHub Actions</text></svg>\n'
+        + f'<text x="{w - 16}" y="{h - 10}" text-anchor="end" font-family="{MONO}" font-size="12" fill="{C["gray"]}">Updated by GitHub Actions</text></svg>\n'
     )
 
 
@@ -241,8 +286,15 @@ def main():
         failed = True
         print(f"ERROR stats: {e}", file=sys.stderr)
     try:
-        add, rem = fetch_langs(a.user, token)
-        write("commit-langs.svg", langs_svg(add, rem))
+        repos = list_repos(a.user, token)
+        add, rem = fetch_langs(a.user, token, repos)
+        if add or rem:
+            write("commit-langs.svg", langs_svg(add, rem))
+        else:
+            sizes = fetch_repo_sizes(a.user, token, repos)
+            write("commit-langs.svg", langs_svg(
+                sizes, collections.Counter(), "No recent commits found",
+                title="Top languages across my repos, by code size", size_mode=True))
     except Exception as e:
         failed = True
         print(f"ERROR commit-langs: {e}", file=sys.stderr)
